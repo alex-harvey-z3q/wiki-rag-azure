@@ -1,0 +1,29 @@
+name: deploy-indexer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "indexer/**"
+      - "scripts/build_push_indexer.sh"
+      - ".github/workflows/deploy-indexer.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Build and push indexer image
+        env:
+          ACR_NAME: ${{ secrets.ACR_NAME }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: bash ./scripts/build_push_indexer.sh

@@ -1,0 +1,7 @@
+[project]
+name = "wiki-rag-ingest"
+version = "0.2.0"
+dependencies = [
+  "azure-storage-blob>=12.24",
+  "requests>=2.32"
+]
