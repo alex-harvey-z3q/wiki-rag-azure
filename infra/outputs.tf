@@ -41,3 +41,15 @@ output "kv_reader_identity_id" {
 output "kv_reader_principal_id" {
   value = azurerm_user_assigned_identity.kv_reader.principal_id
 }
+
+output "github_actions_client_id" {
+  value = azuread_application.github_actions.client_id
+}
+
+output "github_actions_tenant_id" {
+  value = data.azurerm_client_config.current.tenant_id
+}
+
+output "github_actions_subscription_id" {
+  value = data.azurerm_subscription.current.subscription_id
+}
