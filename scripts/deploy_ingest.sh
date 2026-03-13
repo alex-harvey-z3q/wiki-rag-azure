@@ -7,7 +7,6 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 
 readonly DEFAULT_INGEST_JOB_NAME="wiki-rag-azure-ingest"
-readonly DEFAULT_AZURE_LOCATION="australiaeast"
 readonly DEFAULT_CPU="0.5"
 readonly DEFAULT_MEMORY="1.0Gi"
 readonly DEFAULT_REPLICA_TIMEOUT="1800"
@@ -57,7 +56,6 @@ validate_prereqs() {
 
 init_vars() {
   ingest_job_name="${INGEST_JOB_NAME:-$DEFAULT_INGEST_JOB_NAME}"
-  azure_location="${AZURE_LOCATION:-$DEFAULT_AZURE_LOCATION}"
   cpu="${CPU:-$DEFAULT_CPU}"
   memory="${MEMORY:-$DEFAULT_MEMORY}"
   replica_timeout="${REPLICA_TIMEOUT:-$DEFAULT_REPLICA_TIMEOUT}"
@@ -70,7 +68,11 @@ init_vars() {
   acr_login_server="$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)"
   acr_username="$(az acr credential show --name "$ACR_NAME" --query username -o tsv)"
   acr_password="$(az acr credential show --name "$ACR_NAME" --query passwords[0].value -o tsv)"
-  storage_connection_string="$(az storage account show-connection-string --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" --query connectionString -o tsv)"
+  storage_connection_string="$(az storage account show-connection-string \
+    --name "$STORAGE_ACCOUNT_NAME" \
+    --resource-group "$RESOURCE_GROUP" \
+    --query connectionString \
+    -o tsv)"
   image_uri="$acr_login_server"/"$INGEST_IMAGE_NAME":"$GITHUB_SHA"
   latest_uri="$acr_login_server"/"$INGEST_IMAGE_NAME":latest
 }
@@ -130,7 +132,6 @@ _create() {
     --name            "$ingest_job_name" \
     --resource-group  "$RESOURCE_GROUP" \
     --environment     "$CONTAINERAPPS_ENVIRONMENT" \
-    --location        "$azure_location" \
     --trigger-type    Schedule \
     --cron-expression "$ingest_cron" \
     --replica-timeout "$replica_timeout" \
