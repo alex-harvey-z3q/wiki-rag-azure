@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "indexer/**"
-      - "scripts/build_push_indexer.sh"
+      - "scripts/deploy_indexer.sh"
       - ".github/workflows/deploy-indexer.yml"
 
 permissions:
@@ -17,13 +17,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Build and push indexer image
+
+      - name: Deploy indexer job
         env:
-          ACR_NAME: ${{ secrets.ACR_NAME }}
           GITHUB_SHA: ${{ github.sha }}
-        run: bash ./scripts/build_push_indexer.sh
+          ACR_NAME: ${{ vars.ACR_NAME }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          CONTAINERAPPS_ENVIRONMENT: ${{ vars.CONTAINERAPPS_ENVIRONMENT }}
+          KV_READER_IDENTITY_ID: ${{ vars.KV_READER_IDENTITY_ID }}
+          KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
+          POSTGRES_FQDN: ${{ vars.POSTGRES_FQDN }}
+          STORAGE_ACCOUNT_NAME: ${{ vars.STORAGE_ACCOUNT_NAME }}
+          INDEXER_JOB_NAME: ${{ vars.INDEXER_JOB_NAME }}
+          POSTGRES_ADMIN_USERNAME: ${{ vars.POSTGRES_ADMIN_USERNAME }}
+          PGVECTOR_SCHEMA: ${{ vars.PGVECTOR_SCHEMA }}
+          PGVECTOR_TABLE: ${{ vars.PGVECTOR_TABLE }}
+          PARSED_CONTAINER: ${{ vars.PARSED_CONTAINER }}
+          PARSED_PREFIX: ${{ vars.PARSED_PREFIX }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+          CPU: ${{ vars.INDEXER_CPU }}
+          MEMORY: ${{ vars.INDEXER_MEMORY }}
+          REPLICA_TIMEOUT: ${{ vars.INDEXER_REPLICA_TIMEOUT }}
+          PARALLELISM: ${{ vars.INDEXER_PARALLELISM }}
+          COMPLETIONS: ${{ vars.INDEXER_COMPLETIONS }}
+          INDEXER_CRON: ${{ vars.INDEXER_CRON }}
+        run: bash ./scripts/deploy_indexer.sh

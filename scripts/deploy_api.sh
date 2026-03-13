@@ -1,29 +1,23 @@
 #!/usr/bin/env bash
-#
-# Deploy the api ECS service task definition from GitHub Actions.
-#
-# This matches the ingest/indexer deploy pattern:
-# - Build and push Docker image to ECR (tagged with GITHUB_SHA)
-# - Register a new ECS task definition revision with the new image
-# - Update the ECS service to use the new task definition
-#
-# Requires:
-#   - Running inside GitHub Actions
-#   - AWS credentials already configured (OIDC)
-#   - GITHUB_SHA set
-#   - aws, docker, jq installed
 
 set -euo pipefail
 
-readonly AWS_REGION="ap-southeast-2"
-readonly ECR_REPO_NAME="wiki-rag-api"
-readonly DOCKERFILE="api/Dockerfile"
-readonly CONTEXT_DIR="api"
-readonly CONTAINER_NAME="api"
+# ------------------------------------------------------------------------------
+# Constants
+# ------------------------------------------------------------------------------
 
-# Terraform names (must match your ecs.tf)
-readonly ECS_CLUSTER_NAME="wiki-rag"
-readonly ECS_SERVICE_NAME="wiki-rag-api"
+readonly DEFAULT_API_APP_NAME="wiki-rag-azure-api"
+readonly DEFAULT_POSTGRES_ADMIN_USERNAME="wikirdb"
+readonly DEFAULT_PGVECTOR_SCHEMA="public"
+readonly DEFAULT_PGVECTOR_TABLE="wiki_rag_nodes"
+readonly DEFAULT_AZURE_LOCATION="australiaeast"
+readonly API_IMAGE_NAME="wiki-rag-api"
+readonly API_DOCKERFILE="api/Dockerfile"
+readonly API_BUILD_CONTEXT="api"
+
+# ------------------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------------------
 
 log() {
   echo "[INFO] $*" >&2
@@ -35,125 +29,153 @@ die() {
 }
 
 require_cmd() {
-  local cmd="$1"
-  command -v "$cmd" >/dev/null 2>&1 || die "Missing required command: $cmd"
+  command -v "$1" >/dev/null 2>&1 || die "Missing required command: $1"
 }
 
 require_env() {
-  [[ -n "${GITHUB_SHA:-}" ]] || die "GITHUB_SHA is not set (must run in GitHub Actions)"
+  [[ -n "${!1:-}" ]] || die "Required environment variable not set: $1"
 }
 
-get_account_id() {
-  aws sts get-caller-identity --query Account --output text
+# ------------------------------------------------------------------------------
+# Functions
+# ------------------------------------------------------------------------------
+
+validate_prereqs() {
+  require_cmd az
+  require_cmd docker
+
+  require_env GITHUB_SHA
+  require_env ACR_NAME
+  require_env RESOURCE_GROUP
+  require_env CONTAINERAPPS_ENVIRONMENT
+  require_env KV_READER_IDENTITY_ID
+  require_env KEY_VAULT_NAME
+  require_env POSTGRES_FQDN
 }
 
-build_and_push_image() {
-  local tag="$1"
+init_vars() {
+  api_app_name="${API_APP_NAME:-$DEFAULT_API_APP_NAME}"
+  postgres_admin_username="${POSTGRES_ADMIN_USERNAME:-$DEFAULT_POSTGRES_ADMIN_USERNAME}"
+  pgvector_schema="${PGVECTOR_SCHEMA:-$DEFAULT_PGVECTOR_SCHEMA}"
+  pgvector_table="${PGVECTOR_TABLE:-$DEFAULT_PGVECTOR_TABLE}"
+  azure_location="${AZURE_LOCATION:-$DEFAULT_AZURE_LOCATION}"
 
-  local account_id registry image_uri latest_uri
-
-  account_id="$(get_account_id)"
-  registry="$account_id".dkr.ecr."$AWS_REGION".amazonaws.com
-  image_uri="$registry"/"$ECR_REPO_NAME":"$tag"
-  latest_uri="$registry"/"$ECR_REPO_NAME":latest
-
-  log "Building image: $image_uri"
-  docker build -f "$DOCKERFILE" -t "$image_uri" "$CONTEXT_DIR" >&2 || die "docker build failed"
-
-  log "Pushing image: $image_uri"
-  docker push "$image_uri" >&2 || die "docker push failed"
-
-  log "Tagging image: $latest_uri"
-  docker tag "$image_uri" "$latest_uri" || die "docker tag failed"
-
-  log "Pushing image: $latest_uri"
-  docker push "$latest_uri" >&2 || die "docker push failed"
-
-  echo "$image_uri"
+  acr_login_server="$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)"
+  acr_username="$(az acr credential show --name "$ACR_NAME" --query username -o tsv)"
+  acr_password="$(az acr credential show --name "$ACR_NAME" --query passwords[0].value -o tsv)"
+  image_uri="$acr_login_server"/"$API_IMAGE_NAME":"$GITHUB_SHA"
+  latest_uri="$acr_login_server"/:"$API_IMAGE_NAME":latest
 }
 
-get_current_service_task_definition() {
-  aws ecs describe-services \
-    --cluster "$ECS_CLUSTER_NAME" \
-    --services "$ECS_SERVICE_NAME" \
-    --query 'services[0].taskDefinition' \
-    --output text
+build_and_push() {
+  log "Logging in to ACR ${ACR_NAME}"
+  az acr login --name "$ACR_NAME" >/dev/null
+
+  log "Building ${image_uri}"
+  docker build -f "$API_DOCKERFILE" -t "$image_uri" "$API_BUILD_CONTEXT"
+  docker push "$image_uri"
+  docker tag "$image_uri" "$latest_uri"
+  docker push "$latest_uri"
 }
 
-register_new_task_definition_with_image() {
-  local current_td_arn="$1"
-  local new_image="$2"
+_build_secret_array() {
+  local db_secret_url=https://"$KEY_VAULT_NAME".vault.azure.net/secrets/db-password
+  local api_secret_url=https://"$KEY_VAULT_NAME".vault.azure.net/secrets/azure-openai-api-key
+  local endpoint_secret_url=https://"$KEY_VAULT_NAME".vault.azure.net/secrets/azure-openai-endpoint
+  local chat_secret_url=https://"$KEY_VAULT_NAME".vault.azure.net/secrets/azure-openai-chat-deployment
+  local embed_secret_url=https://"$KEY_VAULT_NAME".vault.azure.net/secrets/azure-openai-embed-deployment
 
-  local new_td_json
-  new_td_json="$(
-    aws ecs describe-task-definition \
-      --task-definition "$current_td_arn" \
-      --query 'taskDefinition' \
-      --output json \
-      | jq --arg img "$new_image" --arg name "$CONTAINER_NAME" '
-          .containerDefinitions |=
-            map(if .name == $name then .image = $img else . end)
-          | del(
-              .taskDefinitionArn,
-              .revision,
-              .status,
-              .requiresAttributes,
-              .compatibilities,
-              .registeredAt,
-              .registeredBy
-            )
-        '
-  )"
-
-  aws ecs register-task-definition \
-    --cli-input-json "$new_td_json" \
-    --query 'taskDefinition.taskDefinitionArn' \
-    --output text
+  # shellcheck disable=SC2054
+  secrets=(
+    db-password=keyvaultref:"$db_secret_url",identityref:"$KV_READER_IDENTITY_ID"
+    azure-openai-api-key=keyvaultref:"$api_secret_url",identityref:"$KV_READER_IDENTITY_ID"
+    azure-openai-endpoint=keyvaultref:"$endpoint_secret_url",identityref:"$KV_READER_IDENTITY_ID"
+    azure-openai-chat-deployment=keyvaultref:"$chat_secret_url",identityref:"$KV_READER_IDENTITY_ID"
+    azure-openai-embed-deployment=keyvaultref:"$embed_secret_url",identityref:"$KV_READER_IDENTITY_ID"
+  )
 }
 
-update_service_task_definition() {
-  local new_td_arn="$1"
-
-  aws ecs update-service \
-    --cluster "$ECS_CLUSTER_NAME" \
-    --service "$ECS_SERVICE_NAME" \
-    --task-definition "$new_td_arn" \
-    --query 'service.taskDefinition' \
-    --output text >/dev/null
+_build_env_array() {
+  env_vars=(
+    "DB_HOST=${POSTGRES_FQDN}"
+    "DB_PORT=5432"
+    "DB_NAME=postgres"
+    "DB_USER=${postgres_admin_username}"
+    "DB_PASSWORD=secretref:db-password"
+    "AZURE_OPENAI_ENDPOINT=secretref:azure-openai-endpoint"
+    "AZURE_OPENAI_API_KEY=secretref:azure-openai-api-key"
+    "AZURE_OPENAI_CHAT_DEPLOYMENT=secretref:azure-openai-chat-deployment"
+    "AZURE_OPENAI_EMBED_DEPLOYMENT=secretref:azure-openai-embed-deployment"
+    "VEC_SCHEMA=${pgvector_schema}"
+    "VEC_TABLE=${pgvector_table}"
+    "EMBED_DIM=1536"
+  )
 }
 
-wait_for_stable() {
-  aws ecs wait services-stable \
-    --cluster "$ECS_CLUSTER_NAME" \
-    --services "$ECS_SERVICE_NAME"
+_update() {
+  log "Updating existing Container App ${api_app_name}"
+
+  _build_secret_array
+  _build_env_array
+
+  az containerapp secret set \
+    --name "$api_app_name" \
+    --resource-group "$RESOURCE_GROUP" \
+    --secrets "${secrets[@]}" >/dev/null
+
+  az containerapp update \
+    --name "$api_app_name" \
+    --resource-group "$RESOURCE_GROUP" \
+    --image "$image_uri" \
+    --set-env-vars "${env_vars[@]}" >/dev/null
 }
+
+_create() {
+  log "Creating Container App ${api_app_name}"
+
+  _build_secret_array
+  _build_env_array
+
+  az containerapp create \
+    --name "$api_app_name" \
+    --resource-group "$RESOURCE_GROUP" \
+    --environment "$CONTAINERAPPS_ENVIRONMENT" \
+    --location "$azure_location" \
+    --user-assigned "$KV_READER_IDENTITY_ID" \
+    --image "$image_uri" \
+    --registry-server "$acr_login_server" \
+    --registry-user "$acr_username" \
+    --registry-pass "$acr_password" \
+    --cpu 0.5 \
+    --memory 1.0Gi \
+    --target-port 8000 \
+    --ingress external \
+    --min-replicas 1 \
+    --max-replicas 1 \
+    --secrets "${secrets[@]}" \
+    --env-vars "${env_vars[@]}" >/dev/null
+}
+
+create_or_update() {
+  if az containerapp show \
+    --name "$api_app_name" \
+    --resource-group "$RESOURCE_GROUP" \
+    >/dev/null 2>&1; then
+    _update
+  else
+    _create
+  fi
+}
+
+# ------------------------------------------------------------------------------
+# Main
+# ------------------------------------------------------------------------------
 
 main() {
-  require_cmd aws
-  require_cmd docker
-  require_cmd jq
-
-  require_env
-
-  log "Deploying commit $GITHUB_SHA"
-
-  local current_td_arn image_uri new_td_arn
-
-  current_td_arn="$(get_current_service_task_definition)"
-  [[ -n "$current_td_arn" && "$current_td_arn" != "None" ]] || die "Could not read current service task definition"
-  log "Current task definition: $current_td_arn"
-
-  image_uri="$(build_and_push_image "$GITHUB_SHA")"
-  log "New image: $image_uri"
-
-  new_td_arn="$(register_new_task_definition_with_image "$current_td_arn" "$image_uri")"
-  log "New task definition: $new_td_arn"
-
-  update_service_task_definition "$new_td_arn"
-  log "Service updated"
-
-  wait_for_stable
-  log "Deploy complete"
+  validate_prereqs
+  init_vars
+  build_and_push
+  create_or_update
 }
 
 main "$@"

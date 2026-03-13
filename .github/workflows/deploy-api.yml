@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "api/**"
-      - "scripts/build_push_api.sh"
+      - "scripts/deploy_api.sh"
       - ".github/workflows/deploy-api.yml"
 
 permissions:
@@ -17,14 +17,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Deploy API
         env:
-          ACR_NAME: ${{ secrets.ACR_NAME }}
-          RESOURCE_GROUP: wiki-rag-rg
           GITHUB_SHA: ${{ github.sha }}
-        run: bash ./scripts/build_push_api.sh
+          ACR_NAME: ${{ vars.ACR_NAME }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          CONTAINERAPPS_ENVIRONMENT: ${{ vars.CONTAINERAPPS_ENVIRONMENT }}
+          KV_READER_IDENTITY_ID: ${{ vars.KV_READER_IDENTITY_ID }}
+          KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
+          POSTGRES_FQDN: ${{ vars.POSTGRES_FQDN }}
+          API_APP_NAME: ${{ vars.API_APP_NAME }}
+          POSTGRES_ADMIN_USERNAME: ${{ vars.POSTGRES_ADMIN_USERNAME }}
+          PGVECTOR_SCHEMA: ${{ vars.PGVECTOR_SCHEMA }}
+          PGVECTOR_TABLE: ${{ vars.PGVECTOR_TABLE }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+        run: bash ./scripts/deploy_api.sh

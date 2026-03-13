@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "ingest/**"
-      - "scripts/build_push_ingest.sh"
+      - "scripts/deploy_ingest.sh"
       - ".github/workflows/deploy-ingest.yml"
 
 permissions:
@@ -17,13 +17,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      - name: Build and push ingest image
+
+      - name: Deploy ingest job
         env:
-          ACR_NAME: ${{ secrets.ACR_NAME }}
           GITHUB_SHA: ${{ github.sha }}
-        run: bash ./scripts/build_push_ingest.sh
+          ACR_NAME: ${{ vars.ACR_NAME }}
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          CONTAINERAPPS_ENVIRONMENT: ${{ vars.CONTAINERAPPS_ENVIRONMENT }}
+          STORAGE_ACCOUNT_NAME: ${{ vars.STORAGE_ACCOUNT_NAME }}
+          INGEST_JOB_NAME: ${{ vars.INGEST_JOB_NAME }}
+          RAW_CONTAINER: ${{ vars.RAW_CONTAINER }}
+          PARSED_CONTAINER: ${{ vars.PARSED_CONTAINER }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+          CPU: ${{ vars.INGEST_CPU }}
+          MEMORY: ${{ vars.INGEST_MEMORY }}
+          REPLICA_TIMEOUT: ${{ vars.INGEST_REPLICA_TIMEOUT }}
+          PARALLELISM: ${{ vars.INGEST_PARALLELISM }}
+          COMPLETIONS: ${{ vars.INGEST_COMPLETIONS }}
+          INGEST_CRON: ${{ vars.INGEST_CRON }}
+        run: bash ./scripts/deploy_ingest.sh
