@@ -28,7 +28,7 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
           ACR_NAME: ${{ vars.ACR_NAME }}
-          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+          RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
           CONTAINERAPPS_ENVIRONMENT: ${{ vars.CONTAINERAPPS_ENVIRONMENT }}
           KV_READER_IDENTITY_ID: ${{ vars.KV_READER_IDENTITY_ID }}
           KEY_VAULT_NAME: ${{ vars.KEY_VAULT_NAME }}
