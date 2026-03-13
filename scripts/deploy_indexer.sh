@@ -10,7 +10,6 @@ readonly DEFAULT_INDEXER_JOB_NAME="wiki-rag-azure-indexer"
 readonly DEFAULT_POSTGRES_ADMIN_USERNAME="wikirdb"
 readonly DEFAULT_PGVECTOR_SCHEMA="public"
 readonly DEFAULT_PGVECTOR_TABLE="wiki_rag_nodes"
-readonly DEFAULT_AZURE_LOCATION="australiaeast"
 readonly DEFAULT_CPU="0.5"
 readonly DEFAULT_MEMORY="1.0Gi"
 readonly DEFAULT_REPLICA_TIMEOUT="3600"
@@ -66,7 +65,6 @@ init_vars() {
   postgres_admin_username="${POSTGRES_ADMIN_USERNAME:-$DEFAULT_POSTGRES_ADMIN_USERNAME}"
   pgvector_schema="${PGVECTOR_SCHEMA:-$DEFAULT_PGVECTOR_SCHEMA}"
   pgvector_table="${PGVECTOR_TABLE:-$DEFAULT_PGVECTOR_TABLE}"
-  azure_location="${AZURE_LOCATION:-$DEFAULT_AZURE_LOCATION}"
   cpu="${CPU:-$DEFAULT_CPU}"
   memory="${MEMORY:-$DEFAULT_MEMORY}"
   replica_timeout="${REPLICA_TIMEOUT:-$DEFAULT_REPLICA_TIMEOUT}"
@@ -159,7 +157,6 @@ _create() {
     --name                     "$indexer_job_name" \
     --resource-group           "$RESOURCE_GROUP" \
     --environment              "$CONTAINERAPPS_ENVIRONMENT" \
-    --location                 "$azure_location" \
     --user-assigned            "$KV_READER_IDENTITY_ID" \
     --trigger-type             Schedule \
     --cron-expression          "$indexer_cron" \
