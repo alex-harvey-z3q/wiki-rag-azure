@@ -18,6 +18,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug Azure secret presence
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          test -n "$AZURE_CLIENT_ID" && echo "AZURE_CLIENT_ID present" || echo "AZURE_CLIENT_ID missing"
+          test -n "$AZURE_TENANT_ID" && echo "AZURE_TENANT_ID present" || echo "AZURE_TENANT_ID missing"
+          test -n "$AZURE_SUBSCRIPTION_ID" && echo "AZURE_SUBSCRIPTION_ID present" || echo "AZURE_SUBSCRIPTION_ID missing"
+
       - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
