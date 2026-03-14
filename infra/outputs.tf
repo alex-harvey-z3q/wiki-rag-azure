@@ -53,3 +53,15 @@ output "github_actions_tenant_id" {
 output "github_actions_subscription_id" {
   value = data.azurerm_subscription.current.subscription_id
 }
+
+output "azure_openai_endpoint" {
+  value = azurerm_cognitive_account.openai.endpoint
+}
+
+output "azure_openai_chat_deployment" {
+  value = azurerm_cognitive_deployment.chat.name
+}
+
+output "azure_openai_embed_deployment" {
+  value = azurerm_cognitive_deployment.embed.name
+}
