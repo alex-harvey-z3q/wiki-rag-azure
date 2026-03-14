@@ -66,6 +66,16 @@ resource "azurerm_postgresql_flexible_server" "this" {
   storage_mb             = 32768
   sku_name               = "B_Standard_B1ms"
   zone                   = "1"
+
+  public_network_access_enabled = true
+}
+
+resource "azurerm_postgresql_flexible_server_firewall_rule" "laptop" {
+  name      = "laptop"
+  server_id = azurerm_postgresql_flexible_server.this.id
+
+  start_ip_address = replace(local.laptop_ip, "/32", "")
+  end_ip_address   = replace(local.laptop_ip, "/32", "")
 }
 
 resource "azurerm_user_assigned_identity" "kv_reader" {
