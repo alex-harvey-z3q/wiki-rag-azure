@@ -19,7 +19,7 @@ resource "azurerm_container_app_environment" "this" {
 }
 
 resource "azurerm_storage_account" "this" {
-  name                     = "wikirag${substr(replace(uuid(), "-", ""), 0, 10)}"
+  name                     = "wikirag${random_string.storage_suffix.result}"
   resource_group_name      = azurerm_resource_group.this.name
   location                 = azurerm_resource_group.this.location
   account_tier             = "Standard"
@@ -39,7 +39,7 @@ resource "azurerm_storage_container" "parsed" {
 }
 
 resource "azurerm_container_registry" "this" {
-  name                = "wikiragacr${substr(replace(uuid(), "-", ""), 0, 8)}"
+  name                = "wikiragacr${random_string.acr_suffix.result}"
   resource_group_name = azurerm_resource_group.this.name
   location            = azurerm_resource_group.this.location
   sku                 = "Basic"
