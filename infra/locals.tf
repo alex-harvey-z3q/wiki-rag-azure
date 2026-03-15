@@ -19,5 +19,5 @@ locals {
   azure_openai_embed_model         = "text-embedding-3-large"
   azure_openai_embed_model_version = "1"
 
-  laptop_ip = "1.145.16.146/32"
+  laptop_ip = "203.217.44.248/32"
 }
