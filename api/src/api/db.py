@@ -46,9 +46,9 @@ def fetch_evidence(
         COALESCE(metadata_->>'url', '') AS url,
         NULLIF(metadata_->>'revision_id', '')::bigint AS revision_id,
         text,
-        (embedding <-> %s) AS distance
+        (embedding <-> %s::vector) AS distance
       FROM {table_name}
-      ORDER BY embedding <-> %s
+      ORDER BY embedding <-> %s::vector
       LIMIT %s
     """
 
