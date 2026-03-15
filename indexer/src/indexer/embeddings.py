@@ -9,4 +9,5 @@ def configure_embeddings() -> None:
         model=settings.EMBED_MODEL,
         api_key=settings.AZURE_OPENAI_API_KEY,
         api_base=f"{settings.AZURE_OPENAI_ENDPOINT.rstrip('/')}/openai/v1/",
+        embed_batch_size=100,
     )
