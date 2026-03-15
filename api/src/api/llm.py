@@ -14,7 +14,10 @@ def _client() -> OpenAI:
 
 def embed_text(text: str) -> list[float]:
     client = _client()
-    resp = client.embeddings.create(model=config.AZURE_OPENAI_EMBED_DEPLOYMENT, input=text)
+    resp = client.embeddings.create(
+        model=config.AZURE_OPENAI_EMBED_DEPLOYMENT,
+        input=text,
+    )
     return list(resp.data[0].embedding)
 
 
@@ -27,19 +30,14 @@ def answer_with_evidence(question: str, evidence_items: list[dict]) -> str:
         "Always include citations like [1], [2] corresponding to the evidence list."
     )
 
-    evidence_block = "
-
-".join(
-        f"[{i+1}] {e['page']} — {e['section']}
-URL: {e['url']}
-Excerpt: {e['excerpt']}"
+    evidence_block = "\n\n".join(
+        f"[{i+1}] {e['page']} — {e['section']}\n"
+        f"URL: {e['url']}\n"
+        f"Excerpt: {e['excerpt']}"
         for i, e in enumerate(evidence_items)
     )
 
-    user = f"Question: {question}
-
-Evidence:
-{evidence_block}"
+    user = f"Question: {question}\n\nEvidence:\n{evidence_block}"
 
     resp = client.responses.create(
         model=config.AZURE_OPENAI_CHAT_DEPLOYMENT,
