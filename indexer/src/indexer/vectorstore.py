@@ -8,7 +8,7 @@ from indexer.settings import (
     PGVECTOR_TABLE, PGVECTOR_SCHEMA
 )
 
-EMBED_DIM = 1536
+EMBED_DIM = 3072
 
 
 def get_storage_context():
