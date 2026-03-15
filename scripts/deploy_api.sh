@@ -64,7 +64,7 @@ init_vars() {
   acr_username="$(az acr credential show --name "$ACR_NAME" --query username -o tsv)"
   acr_password="$(az acr credential show --name "$ACR_NAME" --query passwords[0].value -o tsv)"
   image_uri="$acr_login_server"/"$API_IMAGE_NAME":"$GITHUB_SHA"
-  latest_uri="$acr_login_server"/:"$API_IMAGE_NAME":latest
+  latest_uri="$acr_login_server"/"$API_IMAGE_NAME":latest
 }
 
 build_and_push() {
