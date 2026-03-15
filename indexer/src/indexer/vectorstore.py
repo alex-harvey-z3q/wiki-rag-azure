@@ -20,10 +20,17 @@ def get_storage_context():
         f"?sslmode={DB_SSLMODE}"
     )
 
+    async_connection_string = (
+        f"postgresql+asyncpg://{user}:{password}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+        f"?ssl={DB_SSLMODE}"
+    )
+
     vector_store = PGVectorStore.from_params(
         connection_string=connection_string,
+        async_connection_string=async_connection_string,
         table_name=PGVECTOR_TABLE,
         schema_name=PGVECTOR_SCHEMA,
         embed_dim=EMBED_DIM,
     )
+
     return StorageContext.from_defaults(vector_store=vector_store)
