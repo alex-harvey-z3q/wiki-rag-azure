@@ -140,7 +140,6 @@ _create() {
     --name "$api_app_name" \
     --resource-group "$RESOURCE_GROUP" \
     --environment "$CONTAINERAPPS_ENVIRONMENT" \
-    --location "$azure_location" \
     --user-assigned "$KV_READER_IDENTITY_ID" \
     --image "$image_uri" \
     --registry-server "$acr_login_server" \
