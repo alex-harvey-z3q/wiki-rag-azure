@@ -14,6 +14,7 @@ DB_PORT = int(os.environ.get("DB_PORT", "5432"))
 DB_NAME = os.environ.get("DB_NAME", "postgres")
 DB_USER = os.environ["DB_USER"]
 DB_PASSWORD = os.environ["DB_PASSWORD"]
+DB_SSLMODE = os.environ.get("DB_SSLMODE", "require")
 
 PGVECTOR_TABLE = os.environ.get("PGVECTOR_TABLE", "wiki_rag_nodes")
 PGVECTOR_SCHEMA = os.environ.get("PGVECTOR_SCHEMA", "public")
