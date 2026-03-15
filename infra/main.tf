@@ -86,6 +86,12 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "azure_services" {
   end_ip_address   = "0.0.0.0"
 }
 
+resource "azurerm_postgresql_flexible_server_configuration" "vector_extension" {
+  name      = "azure.extensions"
+  server_id = azurerm_postgresql_flexible_server.this.id
+  value     = "VECTOR"
+}
+
 resource "azurerm_user_assigned_identity" "kv_reader" {
   name                = "${local.project}-kv-reader"
   location            = azurerm_resource_group.this.location
