@@ -27,7 +27,7 @@ def _coerce_int(v) -> int | None:
         return v
     try:
         return int(v)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return None
 
 
@@ -38,30 +38,27 @@ def ask(req: AskRequest) -> AskResponse:
         raise HTTPException(status_code=400, detail="question is required")
 
     try:
-        source_nodes = retrieve(question)
-    except Exception as e:  # noqa: BLE001
+        source_rows = retrieve(question)
+    except Exception as e:
         logger.exception("Retrieval failed")
         raise HTTPException(status_code=500, detail=f"retrieval failed: {e}")
 
-    if not source_nodes:
+    if not source_rows:
         raise HTTPException(status_code=404, detail="no evidence found")
 
     evidence: list[EvidenceItem] = []
     evidence_payload: list[dict] = []
 
-    for sn in source_nodes:
-        node = sn.node
-        md = node.metadata or {}
-
-        excerpt = (node.get_content() or "").strip()
+    for row in source_rows:
+        excerpt = (row.text or "").strip()
         if len(excerpt) > config.MAX_EVIDENCE_CHARS:
             excerpt = excerpt[: config.MAX_EVIDENCE_CHARS].rstrip() + "…"
 
         item = EvidenceItem(
-            page=str(md.get("page_title") or md.get("page") or ""),
-            section=str(md.get("section_title") or md.get("section") or ""),
-            url=str(md.get("url") or ""),
-            revision_id=_coerce_int(md.get("revision_id")),
+            page=row.page_title,
+            section=row.section_title,
+            url=row.url,
+            revision_id=_coerce_int(row.revision_id),
             excerpt=excerpt,
         )
         evidence.append(item)
@@ -69,7 +66,7 @@ def ask(req: AskRequest) -> AskResponse:
 
     try:
         answer = answer_with_evidence(question, evidence_payload)
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         logger.exception("LLM answer failed")
         raise HTTPException(status_code=500, detail=f"llm failed: {e}")
 
