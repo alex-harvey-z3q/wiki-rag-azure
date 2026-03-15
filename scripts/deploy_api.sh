@@ -43,7 +43,6 @@ require_env() {
 validate_prereqs() {
   require_cmd az
   require_cmd docker
-
   require_env GITHUB_SHA
   require_env ACR_NAME
   require_env RESOURCE_GROUP
@@ -68,10 +67,10 @@ init_vars() {
 }
 
 build_and_push() {
-  log "Logging in to ACR ${ACR_NAME}"
+  log "Logging in to ACR $ACR_NAME"
   az acr login --name "$ACR_NAME" >/dev/null
 
-  log "Building ${image_uri}"
+  log "Building $image_uri"
   docker build -f "$API_DOCKERFILE" -t "$image_uri" "$API_BUILD_CONTEXT"
   docker push "$image_uri"
   docker tag "$image_uri" "$latest_uri"
@@ -97,62 +96,62 @@ _build_secret_array() {
 
 _build_env_array() {
   env_vars=(
-    "DB_HOST=${POSTGRES_FQDN}"
-    "DB_PORT=5432"
-    "DB_NAME=postgres"
-    "DB_USER=${postgres_admin_username}"
-    "DB_PASSWORD=secretref:db-password"
-    "AZURE_OPENAI_ENDPOINT=secretref:azure-openai-endpoint"
-    "AZURE_OPENAI_API_KEY=secretref:azure-openai-api-key"
-    "AZURE_OPENAI_CHAT_DEPLOYMENT=secretref:azure-openai-chat-deployment"
-    "AZURE_OPENAI_EMBED_DEPLOYMENT=secretref:azure-openai-embed-deployment"
-    "VEC_SCHEMA=${pgvector_schema}"
-    "VEC_TABLE=${pgvector_table}"
-    "EMBED_DIM=1536"
+    DB_HOST="$POSTGRES_FQDN"
+    DB_PORT=5432
+    DB_NAME="postgres"
+    DB_USER="$postgres_admin_username"
+    DB_PASSWORD="secretref:db-password"
+    AZURE_OPENAI_ENDPOINT="secretref:azure-openai-endpoint"
+    AZURE_OPENAI_API_KEY="secretref:azure-openai-api-key"
+    AZURE_OPENAI_CHAT_DEPLOYMENT="secretref:azure-openai-chat-deployment"
+    AZURE_OPENAI_EMBED_DEPLOYMENT="secretref:azure-openai-embed-deployment"
+    VEC_SCHEMA="$pgvector_schema"
+    VEC_TABLE="$pgvector_table"
+    EMBED_DIM=3072
   )
 }
 
 _update() {
-  log "Updating existing Container App ${api_app_name}"
+  log "Updating existing Container App $api_app_name"
 
   _build_secret_array
   _build_env_array
 
   az containerapp secret set \
-    --name "$api_app_name" \
+    --name           "$api_app_name" \
     --resource-group "$RESOURCE_GROUP" \
-    --secrets "${secrets[@]}" >/dev/null
+    --secrets        "${secrets[@]}"    >/dev/null
 
   az containerapp update \
-    --name "$api_app_name" \
+    --name           "$api_app_name" \
     --resource-group "$RESOURCE_GROUP" \
-    --image "$image_uri" \
-    --set-env-vars "${env_vars[@]}" >/dev/null
+    --image          "$image_uri" \
+    --set-env-vars   "${env_vars[@]}"   >/dev/null
 }
 
 _create() {
-  log "Creating Container App ${api_app_name}"
+  log "Creating Container App $api_app_name"
 
   _build_secret_array
   _build_env_array
 
   az containerapp create \
-    --name "$api_app_name" \
-    --resource-group "$RESOURCE_GROUP" \
-    --environment "$CONTAINERAPPS_ENVIRONMENT" \
-    --user-assigned "$KV_READER_IDENTITY_ID" \
-    --image "$image_uri" \
+    --name            "$api_app_name" \
+    --resource-group  "$RESOURCE_GROUP" \
+    --environment     "$CONTAINERAPPS_ENVIRONMENT" \
+    --user-assigned   "$KV_READER_IDENTITY_ID" \
+    --image           "$image_uri" \
     --registry-server "$acr_login_server" \
-    --registry-user "$acr_username" \
-    --registry-pass "$acr_password" \
-    --cpu 0.5 \
-    --memory 1.0Gi \
-    --target-port 8000 \
-    --ingress external \
-    --min-replicas 1 \
-    --max-replicas 1 \
-    --secrets "${secrets[@]}" \
-    --env-vars "${env_vars[@]}" >/dev/null
+    --registry-user   "$acr_username" \
+    --registry-pass   "$acr_password" \
+    --cpu             0.5 \
+    --memory          1.0Gi \
+    --target-port     8000 \
+    --ingress         external \
+    --min-replicas    1 \
+    --max-replicas    1 \
+    --secrets         "${secrets[@]}" \
+    --env-vars        "${env_vars[@]}"   >/dev/null
 }
 
 create_or_update() {
