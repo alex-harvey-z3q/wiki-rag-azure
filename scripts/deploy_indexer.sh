@@ -7,7 +7,7 @@ set -euo pipefail
 # ------------------------------------------------------------------------------
 
 readonly DEFAULT_INDEXER_JOB_NAME="wiki-rag-azure-indexer"
-readonly DEFAULT_POSTGRES_ADMIN_USERNAME="wikirdb@wiki-rag-azure-pg"
+readonly DEFAULT_POSTGRES_ADMIN_USERNAME="wikirdb"
 readonly DEFAULT_PGVECTOR_SCHEMA="public"
 readonly DEFAULT_PGVECTOR_TABLE="wiki_rag_nodes"
 readonly DEFAULT_CPU="0.5"
