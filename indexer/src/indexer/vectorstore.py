@@ -2,11 +2,11 @@ from llama_index.vector_stores.postgres import PGVectorStore
 from llama_index.core import StorageContext
 
 from indexer.settings import (
-    DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD,
+    DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_SSLMODE,
     PGVECTOR_TABLE, PGVECTOR_SCHEMA
 )
 
-EMBED_DIM = 1536  # <-- set this to whatever embedding model dimension you use
+EMBED_DIM = 1536
 
 def get_storage_context():
     vector_store = PGVectorStore.from_params(
@@ -18,5 +18,6 @@ def get_storage_context():
         table_name=PGVECTOR_TABLE,
         schema_name=PGVECTOR_SCHEMA,
         embed_dim=EMBED_DIM,
+        ssl_mode=DB_SSLMODE,
     )
     return StorageContext.from_defaults(vector_store=vector_store)
