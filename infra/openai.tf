@@ -34,7 +34,7 @@ resource "azurerm_cognitive_deployment" "embed" {
 
   sku {
     name     = "Standard"
-    capacity = 1
+    capacity = 20
   }
 
   model {
