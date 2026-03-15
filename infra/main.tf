@@ -78,6 +78,14 @@ resource "azurerm_postgresql_flexible_server_firewall_rule" "laptop" {
   end_ip_address   = replace(local.laptop_ip, "/32", "")
 }
 
+resource "azurerm_postgresql_flexible_server_firewall_rule" "azure_services" {
+  name      = "azure-services"
+  server_id = azurerm_postgresql_flexible_server.this.id
+
+  start_ip_address = "0.0.0.0"
+  end_ip_address   = "0.0.0.0"
+}
+
 resource "azurerm_user_assigned_identity" "kv_reader" {
   name                = "${local.project}-kv-reader"
   location            = azurerm_resource_group.this.location
